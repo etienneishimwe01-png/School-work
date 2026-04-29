@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calculator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f0f0f0;
+      font-family: sans-serif;
+    }
+    .calc {
+      width: 300px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    .display {
+      padding: 1.5rem 1.25rem 1rem;
+      text-align: right;
+      border-bottom: 1px solid #eee;
+    }
+    .expr {
+      font-size: 13px;
+      color: #888;
+      min-height: 18px;
+      margin-bottom: 4px;
+      font-family: monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .num {
+      font-size: 32px;
+      font-weight: 500;
+      color: #111;
+      font-family: monospace;
+      letter-spacing: -1px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .btns {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .btn {
+      border: none;
+      border-right: 1px solid #eee;
+      border-bottom: 1px solid #eee;
+      background: #fff;
+      color: #111;
+      font-size: 16px;
+      height: 64px;
+      cursor: pointer;
+      transition: background 0.1s;
+      font-family: sans-serif;
+    }
+    .btn:last-child,
+    .btn:nth-child(4n) { border-right: none; }
+    .btn:nth-last-child(-n+4) { border-bottom: none; }
+    .btn:hover { background: #f5f5f5; }
+    .btn:active { background: #e8e8e8; }
+    .btn.op { color: #185FA5; font-weight: 500; }
+    .btn.eq { background: #185FA5; color: #fff; font-weight: 500; }
+    .btn.eq:hover { background: #0C447C; }
+    .btn.clear { color: #A32D2D; font-weight: 500; }
+    .btn.span2 { grid-column: span 2; }
+  </style>
+</head>
+<body>
+  <div class="calc">
+    <div class="display">
+      <div class="expr" id="expr"></div>
+      <div class="num" id="num">0</div>
+    </div>
+    <div class="btns" id="btns">
+      <button class="btn clear" data-val="AC">AC</button>
+      <button class="btn op"    data-val="+/-">+/-</button>
+      <button class="btn op"    data-val="%">%</button>
+      <button class="btn op"    data-val="/">÷</button>
+
+      <button class="btn" data-val="7">7</button>
+      <button class="btn" data-val="8">8</button>
+      <button class="btn" data-val="9">9</button>
+      <button class="btn op" data-val="*">×</button>
+
+      <button class="btn" data-val="4">4</button>
+      <button class="btn" data-val="5">5</button>
+      <button class="btn" data-val="6">6</button>
+      <button class="btn op" data-val="-">−</button>
+
+      <button class="btn" data-val="1">1</button>
+      <button class="btn" data-val="2">2</button>
+      <button class="btn" data-val="3">3</button>
+      <button class="btn op" data-val="+">+</button>
+
+      <button class="btn span2" data-val="0">0</button>
+      <button class="btn" data-val=".">.</button>
+      <button class="btn eq" data-val="=">=</button>
+    </div>
+  </div>
+
+  <script>
+    let cur = '0', prev = '', op = '', fresh = true, expr = '';
+    const numEl  = document.getElementById('num');
+    const exprEl = document.getElementById('expr');
+
+    function fmt(v) {
+      let n = parseFloat(v);
+      if (isNaN(n)) return 'Error';
+      let s = n.toPrecision(10).replace(/\.?0+$/, '');
+      if (s.length > 12) s = n.toExponential(4);
+      return s;
+    }
+
+    function update() {
+      numEl.textContent  = cur;
+      exprEl.textContent = expr;
+    }
+
+    function calc(a, b, o) {
+      if (o === '+') return a + b;
+      if (o === '-') return a - b;
+      if (o === '*') return a * b;
+      if (o === '/') return b === 0 ? NaN : a / b;
+    }
+
+    document.getElementById('btns').addEventListener('click', e => {
+      const btn = e.target.closest('.btn');
+      if (!btn) return;
+      const v = btn.dataset.val;
+
+      if (v === 'AC') {
+        cur = '0'; prev = ''; op = ''; fresh = true; expr = '';
+        update(); return;
+      }
+
+      if (v === '+/-') {
+        cur = String(-parseFloat(cur) || 0);
+        update(); return;
+      }
+
+      if (v === '%') {
+        cur = String(parseFloat(cur) / 100);
+        fresh = true; update(); return;
+      }
+
+      if (['+', '-', '*', '/'].includes(v)) {
+        if (op && !fresh) {
+          const r = calc(parseFloat(prev), parseFloat(cur), op);
+          cur = String(fmt(r));
+          prev = cur;
+        } else {
+          prev = cur;
+        }
+        op = v; fresh = true;
+        const sym = v === '/' ? '÷' : v === '*' ? '×' : v === '+' ? '+' : '−';
+        expr = fmt(prev) + ' ' + sym;
+        update(); return;
+      }
+
+      if (v === '.') {
+        if (fresh) { cur = '0.'; fresh = false; }
+        else if (!cur.includes('.')) cur += '.';
+        update(); return;
+      }
+
+      if (v === '=') {
+        if (!op) { expr = ''; update(); return; }
+        const a  = parseFloat(prev);
+        const b  = parseFloat(cur);
+        const sym = op === '/' ? '÷' : op === '*' ? '×' : op === '+' ? '+' : '−';
+        expr = fmt(a) + ' ' + sym + ' ' + fmt(b) + ' =';
+        const r = calc(a, b, op);
+        cur = String(fmt(r));
+        op = ''; prev = ''; fresh = true;
+        update(); return;
+      }
+
+      // digit
+      if (fresh) { cur = v; fresh = false; }
+      else { cur = cur === '0' ? v : cur + v; }
+      update();
+    });
+  </script>
+</body>
+</html>
